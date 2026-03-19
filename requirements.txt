@@ -6,3 +6,5 @@ matplotlib
 seaborn
 textblob
 requests
+lxml
+html5lib
