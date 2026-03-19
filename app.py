@@ -40,15 +40,29 @@ st.markdown("""
 
 # ── Helper functions ─────────────────────────────────────────
 @st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600)
 def get_stock_data(tickers, period_days=730):
+    import time
     end   = datetime.today()
     start = end - timedelta(days=period_days)
-    try:
-        data = yf.download(tickers, start=start, 
-                          end=end, progress=False)['Close']
-        return data.dropna()
-    except:
+    
+    all_data = {}
+    for ticker in tickers:
+        for attempt in range(3):
+            try:
+                stock = yf.Ticker(ticker)
+                hist  = stock.history(start=start, end=end)
+                if len(hist) > 0:
+                    all_data[ticker] = hist['Close']
+                    break
+            except:
+                time.sleep(1)
+    
+    if not all_data:
         return pd.DataFrame()
+    
+    df = pd.DataFrame(all_data)
+    return df.dropna()
 
 @st.cache_data(ttl=3600)
 def get_sentiment(tickers):
