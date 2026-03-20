@@ -3,7 +3,7 @@
 **A free tool that tells retail investors how risky their stock portfolio 
 is — and why — in plain English.**
 
-🔗 **[Live App](https://your-stocksense-url.streamlit.app/)** | 
+🔗 **[Live App]( https://stocksense-7zjjvgthhjkjyv4onhgihx.streamlit.app/)** | 
 Built by [Pranami Gajjar](https://linkedin.com/in/pranami-gajjar045)
 
 ---
