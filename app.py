@@ -201,14 +201,14 @@ if analyze or True:
                 if len(hist) > 0:
                     return t
             except:
-                    continue
+                continue
         return None
 
-     # Resolve all tickers with spinner
-     tickers        = []
-     failed_tickers = []
+    # Resolve all tickers with spinner
+    tickers        = []
+    failed_tickers = []
 
-     with st.spinner("Resolving tickers..."):
+    with st.spinner("Resolving tickers..."):
         for raw in raw_tickers:
             resolved = resolve_ticker(raw)
             if resolved:
@@ -216,8 +216,8 @@ if analyze or True:
             else:
                 failed_tickers.append(raw)
 
-     # Warn about failed tickers
-     if failed_tickers:
+    # Warn about failed tickers
+    if failed_tickers:
         st.warning(f"Could not find data for: {', '.join(failed_tickers)}. "
                f"They have been excluded from the analysis.")
 
