@@ -10,14 +10,12 @@ import time
 import warnings
 warnings.filterwarnings('ignore')
 
-# ── Page config ──────────────────────────────────────────────
 st.set_page_config(
     page_title="StockSense",
     page_icon="📈",
     layout="wide"
 )
 
-# ── Custom CSS ───────────────────────────────────────────────
 st.markdown("""
 <style>
 .risk-score-box {
@@ -38,7 +36,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── Helper functions ─────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def resolve_ticker(ticker):
     suffixes = ['', '.NS', '.BO', '.L', '.DE', '.AS',
@@ -75,6 +72,7 @@ def get_stock_data(tickers, period_days=730):
     df = pd.DataFrame(all_data)
     return df.dropna()
 
+
 @st.cache_data(ttl=3600)
 def get_stock_data_range(tickers, start_str, end_str):
     all_data = {}
@@ -93,6 +91,7 @@ def get_stock_data_range(tickers, start_str, end_str):
         return pd.DataFrame()
     df = pd.DataFrame(all_data)
     return df.dropna(how='all')
+
 
 @st.cache_data(ttl=3600)
 def get_sentiment(tickers):
@@ -135,35 +134,28 @@ def compute_risk_score(returns, sentiment_results, tickers):
         available = [t for t in tickers if t in returns.columns]
         if len(available) < 2:
             return None
-
         returns = returns[available]
         weights = np.array([1 / len(available)] * len(available))
         port_returns = returns.dot(weights)
         port_vol = port_returns.std() * np.sqrt(252)
         vol_score = min(port_vol * 200, 100)
-
         var_95 = abs(np.percentile(port_returns, 5))
         var_score = min(var_95 * 1000, 100)
-
         corr_matrix = returns.corr()
         corr_vals = [corr_matrix.iloc[i, j]
                      for i in range(len(available))
                      for j in range(i + 1, len(available))]
         avg_corr = np.mean(corr_vals) if corr_vals else 0.5
         corr_score = avg_corr * 100
-
         avg_sent = np.mean([sentiment_results[t]['avg_sentiment']
                             for t in available
                             if t in sentiment_results])
         sent_score = max(0, (0.5 - avg_sent) * 100)
-
         composite = (vol_score * 0.35 + var_score * 0.30 +
                      corr_score * 0.20 + sent_score * 0.15)
-
         div_score = (1 - avg_corr) * 100
         div_grade = ('A' if div_score >= 70 else 'B' if div_score >= 55
                      else 'C' if div_score >= 40 else 'D')
-
         return {
             'composite': round(composite, 1),
             'vol_score': round(vol_score, 1),
@@ -181,13 +173,11 @@ def compute_risk_score(returns, sentiment_results, tickers):
         return None
 
 
-# ── Header ───────────────────────────────────────────────────
 st.title("📈 StockSense")
 st.subheader("Personal Portfolio Risk Analyzer for Retail Investors")
 st.markdown("*Know your risk. Make smarter decisions.*")
 st.markdown("---")
 
-# ── Sidebar ──────────────────────────────────────────────────
 st.sidebar.header("🔧 Your Portfolio")
 st.sidebar.markdown("Enter up to 6 stock tickers separated by commas.")
 
@@ -229,6 +219,7 @@ else:
     if period < 30:
         st.sidebar.error("Please select at least 30 days.")
         st.stop()
+
 investment = st.sidebar.number_input(
     "Investment per stock ($)",
     min_value=100,
@@ -248,13 +239,12 @@ st.sidebar.markdown(
     "of their portfolio risk — for free."
 )
 st.sidebar.markdown("**Supports:** US, Indian (.NS), UK (.L), German (.DE), Crypto (-USD)")
+st.sidebar.markdown("⚠️ **Tip:** For best results, mix tickers from the same market.")
 
-# ── Main content ─────────────────────────────────────────────
 if analyze or True:
     raw_tickers = [t.strip().upper() for t in ticker_input.split(',')
                    if t.strip()][:6]
 
-    # Resolve tickers
     tickers = []
     failed_tickers = []
 
@@ -280,18 +270,17 @@ if analyze or True:
         )
         st.stop()
 
-    # Load data
     with st.spinner(f"Fetching data for {', '.join(tickers)}..."):
-       if period_type == "Custom Date Range" and custom_start and custom_end:
-    prices = get_stock_data_range(tuple(tickers),
-                                   str(custom_start),
-                                   str(custom_end))
-else:
-    prices = get_stock_data(tuple(tickers), period)
+        if period_type == "Custom Date Range" and custom_start and custom_end:
+            prices = get_stock_data_range(tuple(tickers),
+                                          str(custom_start),
+                                          str(custom_end))
+        else:
+            prices = get_stock_data(tuple(tickers), period)
 
-if prices.empty:
-    st.error("Could not fetch stock data. Please try again.")
-    st.stop()
+        if prices.empty:
+            st.error("Could not fetch stock data. Please try again.")
+            st.stop()
 
         returns = prices.pct_change().dropna()
         sentiment = get_sentiment(tuple(tickers))
@@ -304,7 +293,6 @@ if prices.empty:
         )
         st.stop()
 
-    # ── Risk score header ─────────────────────────────────────
     st.header(f"Portfolio Analysis — {', '.join(tickers)}")
 
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -319,7 +307,6 @@ if prices.empty:
 
     st.markdown("---")
 
-    # ── Two column layout ─────────────────────────────────────
     left, right = st.columns([1.2, 1])
 
     with left:
@@ -406,7 +393,6 @@ if prices.empty:
 
     st.markdown("---")
 
-    # ── Sentiment section ─────────────────────────────────────
     st.markdown("### 📰 News Sentiment Analysis")
     sent_cols = st.columns(len(tickers))
     for i, ticker in enumerate(tickers):
@@ -427,7 +413,6 @@ if prices.empty:
 
     st.markdown("---")
 
-    # ── Plain English summary ─────────────────────────────────
     st.markdown("### 💡 Portfolio Summary")
     best_sharpe = max(tickers,
                       key=lambda t: (returns[t].mean() * 252 - 0.05) /
@@ -452,7 +437,6 @@ if prices.empty:
 - **Diversification grade: {metrics['div_grade']} ({metrics['div_score']:.0f}/100)** — {'Your portfolio is well diversified.' if metrics['div_grade'] == 'A' else 'Consider adding assets from different sectors or asset classes to reduce correlation.' if metrics['div_grade'] in ['C', 'D'] else 'Reasonably diversified but room to improve.'}
 """)
 
-    # ── Export ────────────────────────────────────────────────
     st.markdown("---")
     st.markdown("### 📥 Export Report")
 
