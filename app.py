@@ -75,6 +75,24 @@ def get_stock_data(tickers, period_days=730):
     df = pd.DataFrame(all_data)
     return df.dropna()
 
+@st.cache_data(ttl=3600)
+def get_stock_data_range(tickers, start_str, end_str):
+    all_data = {}
+    for ticker in tickers:
+        for attempt in range(3):
+            try:
+                stock = yf.Ticker(ticker)
+                hist = stock.history(start=start_str, end=end_str,
+                                     auto_adjust=True)
+                if len(hist) > 0:
+                    all_data[ticker] = hist['Close']
+                    break
+            except:
+                time.sleep(1)
+    if not all_data:
+        return pd.DataFrame()
+    df = pd.DataFrame(all_data)
+    return df.dropna(how='all')
 
 @st.cache_data(ttl=3600)
 def get_sentiment(tickers):
@@ -179,14 +197,38 @@ ticker_input = st.sidebar.text_input(
     placeholder="e.g. AAPL, TSLA, GOOGL"
 )
 
-period = st.sidebar.selectbox(
+period_type = st.sidebar.radio(
     "Analysis Period",
-    options=[180, 365, 730],
-    index=2,
-    format_func=lambda x: f"{x // 365} Year{'s' if x // 365 > 1 else ''}"
-                           if x >= 365 else f"{x // 30} Months"
+    options=["Preset", "Custom Date Range"],
+    horizontal=True
 )
 
+if period_type == "Preset":
+    period = st.sidebar.selectbox(
+        "Select Period",
+        options=[180, 365, 730],
+        index=2,
+        format_func=lambda x: f"{x // 365} Year{'s' if x // 365 > 1 else ''}"
+                               if x >= 365 else f"{x // 30} Months"
+    )
+    custom_start = None
+    custom_end = None
+else:
+    col_a, col_b = st.sidebar.columns(2)
+    custom_start = col_a.date_input(
+        "Start Date",
+        value=datetime.today() - timedelta(days=365),
+        max_value=datetime.today() - timedelta(days=30)
+    )
+    custom_end = col_b.date_input(
+        "End Date",
+        value=datetime.today(),
+        max_value=datetime.today()
+    )
+    period = (custom_end - custom_start).days
+    if period < 30:
+        st.sidebar.error("Please select at least 30 days.")
+        st.stop()
 investment = st.sidebar.number_input(
     "Investment per stock ($)",
     min_value=100,
@@ -240,10 +282,16 @@ if analyze or True:
 
     # Load data
     with st.spinner(f"Fetching data for {', '.join(tickers)}..."):
-        prices = get_stock_data(tuple(tickers), period)
-        if prices.empty:
-            st.error("Could not fetch stock data. Please try again.")
-            st.stop()
+       if period_type == "Custom Date Range" and custom_start and custom_end:
+    prices = get_stock_data_range(tuple(tickers),
+                                   str(custom_start),
+                                   str(custom_end))
+else:
+    prices = get_stock_data(tuple(tickers), period)
+
+if prices.empty:
+    st.error("Could not fetch stock data. Please try again.")
+    st.stop()
 
         returns = prices.pct_change().dropna()
         sentiment = get_sentiment(tuple(tickers))
