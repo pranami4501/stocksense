@@ -191,40 +191,40 @@ if analyze or True:
     # Auto-detect correct ticker format
     @st.cache_data(ttl=3600)
     def resolve_ticker(ticker):
-    	suffixes = ['', '.NS', '.BO', '.L', '.DE', '.AS', 
+        suffixes = ['', '.NS', '.BO', '.L', '.DE', '.AS', 
                 '.TO', '.AX', '.HK', '-USD']
-    	for suffix in suffixes:
+        for suffix in suffixes:
             try:
-            	t = ticker + suffix if not ticker.endswith(suffix) else ticker
-            	stock = yf.Ticker(t)
-            	hist  = stock.history(period='5d')
-            	if len(hist) > 0:
-                	return t
-        	except:
-            		continue
-    	return None
+                t = ticker + suffix if not ticker.endswith(suffix) else ticker
+                stock = yf.Ticker(t)
+                hist  = stock.history(period='5d')
+                if len(hist) > 0:
+                    return t
+            except:
+                    continue
+        return None
 
      # Resolve all tickers with spinner
      tickers        = []
      failed_tickers = []
 
      with st.spinner("Resolving tickers..."):
-    	for raw in raw_tickers:
+        for raw in raw_tickers:
             resolved = resolve_ticker(raw)
             if resolved:
-            	tickers.append(resolved)
+                tickers.append(resolved)
             else:
-            	failed_tickers.append(raw)
+                failed_tickers.append(raw)
 
      # Warn about failed tickers
      if failed_tickers:
-    	st.warning(f"Could not find data for: {', '.join(failed_tickers)}. "
+        st.warning(f"Could not find data for: {', '.join(failed_tickers)}. "
                f"They have been excluded from the analysis.")
 
      if len(tickers) < 2:
-    	st.error("Need at least 2 valid tickers to analyze. "
+        st.error("Need at least 2 valid tickers to analyze. "
              "Please check your input and try again.")
-    	st.stop()
+        st.stop()
     # Load data
     with st.spinner(f"Fetching data for {', '.join(tickers)}..."):
         prices  = get_stock_data(tuple(tickers), period)
